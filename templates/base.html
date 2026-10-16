@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CrisisCore // National Emergency & Disaster Response Platform{% endblock %}</title>
+  
+  <!-- SEO & Disaster Meta Tags -->
+  <meta name="description" content="Mission-critical disaster management and emergency response system connecting citizens with NDMA, SDMA, rescue teams, and relief authorities.">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- CrisisCore CSS System -->
+  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="stylesheet" href="/static/css/citizen.css">
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+  <link rel="stylesheet" href="/static/css/map.css">
+  
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  <!-- Top Emergency Ticker & System Telemetry -->
+  <div class="emergency-banner" id="topEmergencyTicker">
+    <div class="banner-content">
+      <span class="pulsing-dot"></span>
+      <span><b>NATIONAL DISASTER OPERATIONS DESK (NEOC)</b>: 24x7 Multi-Agency Emergency Response Active</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <span id="liveTimeClock" style="font-family:var(--font-mono); font-size:0.78rem;">Loading...</span>
+      <span style="background:rgba(0,0,0,0.25); padding:2px 8px; border-radius:4px; font-size:0.75rem;">DIAL <b>112</b> / <b>1070</b></span>
+    </div>
+  </div>
+
+  <!-- Main Navigation Bar -->
+  <nav class="site-nav">
+    <div class="nav-container">
+      <a href="/" class="brand-wrapper" id="navBrandLogo">
+        <div class="brand-icon">🚨</div>
+        <div class="brand-text">
+          <h1>CrisisCore</h1>
+          <span>Disaster Management System // NDMA Compliant</span>
+        </div>
+      </a>
+
+      <div class="nav-links">
+        <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">Home</a>
+        <a href="/report" class="nav-item critical-sos {% if request.path == '/report' %}active{% endif %}" id="navReportSosBtn">🚨 Report Emergency</a>
+        <a href="/track" class="nav-item {% if request.path == '/track' %}active{% endif %}">Track Request</a>
+        
+        {% if session.get('user_id') %}
+          <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">Command Dashboard</a>
+          <a href="/resources" class="nav-item {% if request.path == '/resources' %}active{% endif %}">Resources</a>
+          <a href="/gov-gateway" class="nav-item {% if request.path == '/gov-gateway' %}active{% endif %}">Gov Gateway</a>
+          <a href="/analytics" class="nav-item {% if request.path == '/analytics' %}active{% endif %}">Analytics</a>
+          
+          <div class="user-profile-badge">
+            <span class="role-pill">{{ session.get('role', 'Official') }}</span>
+            <span style="font-weight:600; font-size:0.8rem; color:var(--text-bright);">{{ session.get('full_name', 'Officer').split(' ')[0] }}</span>
+            <a href="/logout" title="Sign out" style="color:var(--text-muted); text-decoration:none; margin-left:4px;">✕</a>
+          </div>
+        {% else %}
+          <a href="/login" class="nav-item btn btn-outline btn-sm" id="navAuthorityLoginBtn">Authority Login</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div style="max-width:1400px; margin:16px auto 0 auto; padding:0 24px;">
+        {% for category, message in messages %}
+          <div class="toast-msg" style="margin-bottom:8px; border-left:4px solid {% if category == 'danger' %}#ef4444{% elif category == 'warning' %}#f59e0b{% else %}#3b82f6{% endif %};">
+            <div>{{ message }}</div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Main Viewport Content -->
+  <main class="site-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Modals used across portals -->
+  <!-- 1. Assign Team Modal -->
+  <div class="modal-overlay" id="assignTeamModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Assign Rescue Battalion</div>
+        <button class="modal-close-btn" onclick="closeModal('assignTeamModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+          Assigning responder unit to Incident <b id="assignModalTracking" style="color:#38bdf8;"></b>
+        </p>
+        <form id="assignTeamForm">
+          <div class="form-group">
+            <label>Select Available Rescue Unit</label>
+            <select class="form-control" id="assignTeamSelect" required>
+              <option value="">-- Choose Rescue Team --</option>
+              <option value="1">NDRF 4th Battalion - Water Rescue Unit Alpha (Arakkonam / Aluva Base)</option>
+              <option value="2">NDRF 8th Battalion - Urban Search & Rescue (Ghaziabad / Mumbai Regional Hub)</option>
+              <option value="3">SDRF Mountain High-Altitude Triage Unit (Chamoli / Joshimath Base)</option>
+              <option value="4">Kerala Fire & Rescue Special Task Force (Ernakulam Central)</option>
+              <option value="5">Red Cross Emergency Medical & Trauma Unit (Guwahati Disaster Hub)</option>
+              <option value="6">Indian Coast Guard Air & Marine Evac Flight (Paradip)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Deployment Instructions & Field Notes</label>
+            <textarea class="form-control" id="assignNotesInput" rows="3" placeholder="Specify staging location, target victims, and priority equipment..."></textarea>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('assignTeamModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="confirmAssignBtn">Confirm & Dispatch Team</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Update Status Modal -->
+  <div class="modal-overlay" id="updateStatusModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Advance Rescue Operational Status</div>
+        <button class="modal-close-btn" onclick="closeModal('updateStatusModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+          Updating Incident <b id="statusModalTracking" style="color:#38bdf8;"></b> across 7 Designated Operational Stages
+        </p>
+        <form id="updateStatusForm">
+          <div class="form-group">
+            <label>Operational Stage</label>
+            <select class="form-control" id="statusSelectInput" required>
+              <option value="Submitted">1. Submitted (Citizen request recorded)</option>
+              <option value="Under Review">2. Under Review (Triage verification in progress)</option>
+              <option value="Verified">3. Verified (Distress coordinates confirmed)</option>
+              <option value="Assigned to Rescue Team">4. Assigned to Rescue Team (Battalion alerted)</option>
+              <option value="Rescue Team Dispatched">5. Rescue Team Dispatched (En-route to coordinates)</option>
+              <option value="Assistance in Progress">6. Assistance in Progress (Evacuation / Triage underway)</option>
+              <option value="Resolved">7. Resolved (All affected persons secured)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Field Notes / Commander Remarks <span style="color:#ef4444;">* Mandatory</span></label>
+            <textarea class="form-control" id="statusNotesInput" rows="3" placeholder="Enter operational justification, victim status, or responder telemetry..." required></textarea>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('updateStatusModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="confirmStatusBtn">Save Operational Status</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Priority Breakdown Modal (Explainable AI) -->
+  <div class="modal-overlay" id="priorityBreakdownModal">
+    <div class="modal-box" style="max-width:720px;">
+      <div class="modal-header">
+        <div class="modal-title" id="priorityModalTitle">Smart Priority Score Analysis</div>
+        <button class="modal-close-btn" onclick="closeModal('priorityBreakdownModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+          <span style="font-size:0.85rem; color:var(--text-muted);">Algorithmic Multi-Factor Explainability Matrix</span>
+          <span id="priorityModalScoreBadge" class="badge-priority critical">CRITICAL // 96/100</span>
+        </div>
+
+        <!-- Factor Progress Bars -->
+        <div class="breakdown-factors-list" id="factorsListContainer">
+          <!-- Dynamically populated via dashboard.js -->
+        </div>
+
+        <!-- Human Commander Override Section -->
+        <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+          <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-bright); margin-bottom:8px;">
+            🛡️ Authorized Commander Override
+          </h4>
+          <p style="font-size:0.76rem; color:var(--text-muted); margin-bottom:12px;">
+            Human-in-the-loop guarantee: Commanders may override automated priority levels with formal justification.
+          </p>
+          <form id="overridePriorityForm">
+            <div class="form-grid-2">
+              <div class="form-group">
+                <label>Manual Priority Level</label>
+                <select class="form-control" id="overrideLevelSelect">
+                  <option value="CRITICAL">CRITICAL (Immediate Multi-Agency Dispatch)</option>
+                  <option value="HIGH">HIGH (Urgent Battalion Mobilization)</option>
+                  <option value="MEDIUM">MEDIUM (Standard Queue Assessment)</option>
+                  <option value="LOW">LOW (Precautionary / Civil Defense)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Written Justification Note</label>
+                <input type="text" class="form-control" id="overrideReasonInput" placeholder="Reason for priority adjustment..." required>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+              <button type="submit" class="btn btn-outline btn-sm" id="confirmOverrideBtn">Authorize Override</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Government Transmission Modal -->
+  <div class="modal-overlay" id="govTransmitModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">Transmit to Official Government Gateway</div>
+        <button class="modal-close-btn" onclick="closeModal('govTransmitModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+          Target Incident: <b id="govModalTracking" style="color:#38bdf8;"></b> (<span id="govModalLocation"></span>)
+        </p>
+
+        <div style="background:rgba(37,99,235,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; font-size:0.78rem; color:#bfdbfe;">
+          <b>GOVERNMENT INTEROPERABILITY MANDATE:</b>
+          Emergency payloads are formatted per OASIS CAP v1.2 specifications and transmitted to authorized government disaster portals. A cryptographic SHA-256 transmission receipt is generated for official audit.
+        </div>
+
+        <form id="govTransmitForm">
+          <div class="form-group">
+            <label>Receiving Government Authority</label>
+            <select class="form-control" id="govAgencySelect">
+              <option value="NDMA_CENTRAL">National Disaster Management Authority (NEOC MHA Central)</option>
+              <option value="SDMA_STATE">State Disaster Management Authority (State Control Room)</option>
+              <option value="DDMA_DISTRICT">District Disaster Management Authority (Collectorate EOC)</option>
+              <option value="ERSS_112">Emergency Response Support System (112 Unified CAD)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Official Verification Note</label>
+            <textarea class="form-control" id="govTransmitNotes" rows="2" placeholder="Commander confirmation remarks..."></textarea>
+          </div>
+          <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="simulateFailCheck">
+            <label for="simulateFailCheck" style="font-size:0.75rem; color:var(--text-muted); cursor:pointer;">
+              Simulate Gateway 503 Outage (Tests transparent error & manual export fallback)
+            </label>
+          </div>
+          <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('govTransmitModal')">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="confirmGovTransmitBtn">Authorize & Securely Transmit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-left">
+        <span style="font-size:1.2rem;">🇮🇳</span>
+        <div>
+          <b>CrisisCore National Disaster Response & Triage Grid</b><br>
+          <span style="font-size:0.75rem;">OASIS CAP v1.2 Standard Compliant // Integrated with NDMA, SDMA & DDMA</span>
+        </div>
+      </div>
+      <div class="footer-helplines">
+        <span class="helpline-item">National Emergency: <b>112</b></span>
+        <span class="helpline-item">NDMA Control: <b>1070</b></span>
+        <span class="helpline-item">District Disaster: <b>1077</b></span>
+        <span class="helpline-item">Ambulance: <b>108</b></span>
+        <span class="helpline-item">Fire & Rescue: <b>101</b></span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Core Script -->
+  <script src="/static/js/main.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+  
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

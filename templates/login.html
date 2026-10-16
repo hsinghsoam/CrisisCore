@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Authority & Responder Sign-In // CrisisCore Command{% endblock %}
+
+{% block content %}
+<div style="max-width:480px; margin:40px auto;">
+
+  <div class="form-container-card" style="padding:32px;">
+    
+    <div style="text-align:center; margin-bottom:24px;">
+      <div style="width:54px; height:54px; margin:0 auto 12px auto; background:linear-gradient(135deg, #ef4444, #2563eb); border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; font-size:1.8rem;">
+        🛡️
+      </div>
+      <h2 style="font-size:1.5rem; font-weight:800; color:var(--text-bright);">Authorized Personnel Sign-In</h2>
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">
+        NDMA / SDMA / DDMA & Registered Emergency Responders
+      </p>
+    </div>
+
+    <form id="authorityLoginForm">
+      <div class="form-group">
+        <label for="loginUsername">Official Identity / Username</label>
+        <input type="text" class="form-control" id="loginUsername" name="username" placeholder="e.g. admin or sdma_officer" required>
+      </div>
+
+      <div class="form-group">
+        <label for="loginPassword">Access Key / Password</label>
+        <input type="password" class="form-control" id="loginPassword" name="password" placeholder="Enter password" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary" id="loginSubmitBtn" style="width:100%; padding:12px; margin-top:12px;">
+        Sign In to Command Portal
+      </button>
+    </form>
+
+    <!-- Quick Demo Credential Buttons for Testing -->
+    <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--text-dim); font-weight:700; margin-bottom:10px; text-align:center;">
+        One-Click Demo Credentials (Test Profiles)
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="fillCredentials('admin', 'Admin@123')" style="justify-content:space-between;">
+          <span>👑 <b>Admin</b> (Rajesh Kumar IAS, NDMA)</span>
+          <span style="font-family:var(--font-mono); font-size:0.7rem; color:#38bdf8;">admin / Admin@123</span>
+        </button>
+
+        <button type="button" class="btn btn-outline btn-sm" onclick="fillCredentials('sdma_officer', 'Sdma@123')" style="justify-content:space-between;">
+          <span>🏛️ <b>SDMA Official</b> (Dr. Meenakshi Nair)</span>
+          <span style="font-family:var(--font-mono); font-size:0.7rem; color:#38bdf8;">sdma_officer / Sdma@123</span>
+        </button>
+
+        <button type="button" class="btn btn-outline btn-sm" onclick="fillCredentials('ndrf_lead', 'Ndrf@123')" style="justify-content:space-between;">
+          <span>🛡️ <b>NDRF Responder</b> (Insp. Vikramaditya)</span>
+          <span style="font-family:var(--font-mono); font-size:0.7rem; color:#38bdf8;">ndrf_lead / Ndrf@123</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function fillCredentials(u, p) {
+  document.getElementById("loginUsername").value = u;
+  document.getElementById("loginPassword").value = p;
+  showToast(`Loaded ${u} credentials`, "info");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("authorityLoginForm");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const u = document.getElementById("loginUsername").value.trim();
+      const p = document.getElementById("loginPassword").value.trim();
+      const btn = document.getElementById("loginSubmitBtn");
+
+      btn.disabled = true;
+      btn.textContent = "Authenticating...";
+
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast("Authentication successful! Loading Operations Grid...", "success");
+          setTimeout(() => {
+            window.location.href = data.redirect_url;
+          }, 800);
+        } else {
+          showToast(data.error || "Authentication failed.", "error");
+          btn.disabled = false;
+          btn.textContent = "Sign In to Command Portal";
+        }
+      } catch (err) {
+        showToast("Network error during authentication.", "error");
+        btn.disabled = false;
+        btn.textContent = "Sign In to Command Portal";
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

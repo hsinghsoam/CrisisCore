@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Resource & Asset Logistics // CrisisCore{% endblock %}
+
+{% block content %}
+<div class="resources-wrapper">
+
+  <div class="dashboard-header">
+    <div>
+      <h2 style="font-size:1.6rem; font-weight:800; color:var(--text-bright);">
+        Disaster Relief Logistics & Stockpile Monitoring
+      </h2>
+      <p style="color:var(--text-muted); font-size:0.85rem;">
+        Inventory telemetry across regional depots, NDRF battalions, district relief centers, and hospital casualty wards.
+      </p>
+    </div>
+
+    <div class="dashboard-actions">
+      <a href="/api/export/sitrep.pdf" class="btn btn-outline btn-sm">Download Logistics Report (PDF)</a>
+    </div>
+  </div>
+
+  <!-- Resource Categories Grid -->
+  <div style="margin-bottom:32px;">
+    <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-bright); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+      📦 Critical Disaster Relief Equipment & Supplies
+    </h3>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:18px;">
+      {% for r in resources %}
+        {% set pct = (r.available_qty / r.total_qty * 100) | round %}
+        <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <span class="badge-status submitted" style="font-size:0.68rem;">{{ r.category }}</span>
+              <span style="font-size:0.75rem; color:var(--text-dim);">📍 {{ r.location_district }}, {{ r.state }}</span>
+            </div>
+
+            <div style="font-size:1.05rem; font-weight:700; color:var(--text-bright); margin:4px 0 10px 0;">
+              {{ r.resource_name }}
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+              <span style="font-size:1.6rem; font-weight:800; font-family:var(--font-mono); color:{% if pct < 25 %}#ef4444{% elif pct < 50 %}#f97316{% else %}#10b981{% endif %};">
+                {{ r.available_qty }} <span style="font-size:0.9rem; color:var(--text-muted);">/ {{ r.total_qty }} {{ r.unit }}</span>
+              </span>
+              <span style="font-size:0.8rem; font-weight:700; color:var(--text-dim);">{{ pct }}% Available</span>
+            </div>
+
+            <!-- Capacity Bar -->
+            <div style="width:100%; height:8px; background:var(--bg-surface); border-radius:var(--radius-full); overflow:hidden; margin-bottom:14px;">
+              <div style="width:{{ pct }}%; height:100%; background:linear-gradient(90deg, #3b82f6, {% if pct < 25 %}#ef4444{% elif pct < 50 %}#f97316{% else %}#10b981{% endif %}); border-radius:var(--radius-full);"></div>
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; pt-2; border-top:1px solid var(--border-subtle); padding-top:12px;">
+            <span style="font-size:0.7rem; color:var(--text-dim);">Updated: {{ r.last_updated[:10] }}</span>
+            <button class="btn btn-outline btn-sm" onclick="promptUpdateResource({{ r.id }}, '{{ r.resource_name }}', {{ r.available_qty }})">
+              Update Count
+            </button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Verified Relief Camps & Emergency Hospitals -->
+  <div class="table-card">
+    <div class="table-header-bar">
+      <h3>
+        <span>🏥</span> Verified Emergency Hospitals, Relief Shelters & Helipads
+      </h3>
+      <span class="badge-status verified">Official Registry</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Facility Name</th>
+            <th>Type</th>
+            <th>District & State</th>
+            <th>Total Capacity</th>
+            <th>Available Capacity</th>
+            <th>Occupancy Rate</th>
+            <th>Emergency Desk</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in camps %}
+            {% set occ = (((c.total_capacity - c.available_capacity) / c.total_capacity) * 100) | round %}
+            <tr>
+              <td>
+                <div style="font-weight:700; color:var(--text-bright);">{{ c.name }}</div>
+                <div style="font-size:0.7rem; color:var(--text-dim); font-family:var(--font-mono);">
+                  Lat: {{ c.lat }}, Lng: {{ c.lng }}
+                </div>
+              </td>
+              <td>
+                <span class="badge-status {% if c.type == 'Hospital' %}under-review{% else %}verified{% endif %}">
+                  {{ c.type }}
+                </span>
+              </td>
+              <td>📍 {{ c.district }}, {{ c.state }}</td>
+              <td style="font-family:var(--font-mono);">{{ c.total_capacity }} Beds / Capacity</td>
+              <td style="font-family:var(--font-mono); font-weight:700; color:#34d399;">{{ c.available_capacity }} Beds Free</td>
+              <td>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="width:70px; height:6px; background:#1e293b; border-radius:var(--radius-full); overflow:hidden;">
+                    <div style="width:{{ occ }}%; height:100%; background:{% if occ > 80 %}#ef4444{% elif occ > 50 %}#f97316{% else %}#10b981{% endif %};"></div>
+                  </div>
+                  <span style="font-size:0.75rem; color:var(--text-dim);">{{ occ }}%</span>
+                </div>
+              </td>
+              <td>
+                <a href="tel:{{ c.contact_phone }}" style="color:#38bdf8; text-decoration:none; font-family:var(--font-mono); font-size:0.8rem;">
+                  📞 {{ c.contact_phone }}
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function promptUpdateResource(resId, name, currentQty) {
+  const newQty = prompt(`Update available quantity for '${name}':`, currentQty);
+  if (newQty === null) return;
+
+  const parsed = parseInt(newQty, 10);
+  if (isNaN(parsed) || parsed < 0) {
+    showToast("Please enter a valid non-negative number.", "warning");
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/resources/${resId}/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ available_qty: parsed })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(data.message, "success");
+      setTimeout(() => window.location.reload(), 1000);
+    } else {
+      showToast(data.error || "Failed to update quantity.", "error");
+    }
+  } catch (e) {
+    showToast("Network error.", "error");
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block title %}Incident Dossier // {{ incident.tracking_id }} // CrisisCore{% endblock %}
+
+{% block content %}
+<div class="incident-dossier-wrapper">
+
+  <!-- Dossier Header -->
+  <div class="dashboard-header">
+    <div>
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:4px;">
+        <span style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; font-family:var(--font-mono);">
+          Incident Dossier
+        </span>
+        <span class="badge-priority {{ incident.priority_level.lower() }}">
+          {{ incident.priority_level }} // Score: {{ incident.priority_score }}/100
+        </span>
+        <span class="badge-status {{ incident.status.lower().replace(' ', '-') }}">
+          {{ incident.status }}
+        </span>
+        {% if incident.government_sync_status == 'TRANSMITTED' %}
+          <span class="badge-gov transmitted">✓ Transmitted to Gov</span>
+        {% elif incident.government_sync_status == 'PENDING_REVIEW' %}
+          <span class="badge-gov pending">⏳ Pending Gov Review</span>
+        {% elif incident.government_sync_status == 'TRANSMISSION_FAILED' %}
+          <span class="badge-gov failed">✕ Gov Transmission Failed</span>
+        {% else %}
+          <span class="badge-gov unforwarded">Gov Sync: Unforwarded</span>
+        {% endif %}
+      </div>
+
+      <h2 style="font-size:1.8rem; font-weight:800; color:var(--text-bright); font-family:var(--font-mono);">
+        {{ incident.tracking_id }}
+      </h2>
+      <p style="color:var(--text-muted); font-size:0.85rem;">
+        Reported on <b>{{ incident.created_at[:19].replace('T', ' ') }} UTC</b> by <b>{{ incident.citizen_name }}</b> ({{ incident.phone }})
+      </p>
+    </div>
+
+    <div class="dashboard-actions">
+      <a href="/track?id={{ incident.tracking_id }}" target="_blank" class="btn btn-outline btn-sm">
+        🔗 Citizen View
+      </a>
+      <a href="/dashboard" class="btn btn-outline btn-sm">
+        ← Back to Command Center
+      </a>
+    </div>
+  </div>
+
+  <!-- 2-Column Command Dossier Grid -->
+  <div class="dossier-grid">
+
+    <!-- Left Column: Core Dossier & Intelligence -->
+    <div>
+
+      <!-- Incident Intelligence Card -->
+      <div class="dossier-card">
+        <h3><span>🚨</span> Disaster Telemetry & Distress Data</h3>
+
+        <div class="dossier-meta-grid">
+          <div class="meta-field">
+            <label>Disaster Category</label>
+            <span>{{ incident.disaster_type }}</span>
+          </div>
+          <div class="meta-field">
+            <label>Reported Severity</label>
+            <span>{{ incident.severity_input }}</span>
+          </div>
+          <div class="meta-field">
+            <label>State & District</label>
+            <span>{{ incident.district }}, {{ incident.state }}</span>
+          </div>
+          <div class="meta-field">
+            <label>Geo Coordinates</label>
+            <span style="font-family:var(--font-mono); color:#38bdf8;">{{ incident.lat }}, {{ incident.lng }}</span>
+          </div>
+          <div class="meta-field">
+            <label>Citizens Affected</label>
+            <span>{{ incident.affected_count }} Persons</span>
+          </div>
+          <div class="meta-field">
+            <label>Injured Demographics</label>
+            <span style="color:{% if incident.injured_count > 0 %}#f87171{% else %}var(--text-bright){% endif %}; font-weight:700;">
+              {{ incident.injured_count }} Injured
+            </span>
+          </div>
+          <div class="meta-field">
+            <label>Vulnerable Citizens</label>
+            <span>{{ incident.children_count }} Children, {{ incident.elderly_count }} Elderly</span>
+          </div>
+          <div class="meta-field">
+            <label>Assistance Demanded</label>
+            <span style="color:#60a5fa;">{{ incident.assistance_required }}</span>
+          </div>
+          <div class="meta-field" style="grid-column: 1 / -1;">
+            <label>Specific Address & Landmarks</label>
+            <span>{{ incident.address }}</span>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; display:block; margin-bottom:4px;">
+            Full Citizen Description
+          </label>
+          <div style="background:var(--bg-surface); padding:14px; border-radius:var(--radius-md); font-size:0.88rem; line-height:1.6; border:1px solid var(--border-subtle);">
+            {{ incident.description }}
+          </div>
+        </div>
+
+        {% if incident.problems %}
+          <div style="margin-top:14px;">
+            <label style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; display:block; margin-bottom:4px;">
+              Immediate Obstacles & Hazards
+            </label>
+            <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); padding:12px; border-radius:var(--radius-md); font-size:0.85rem; color:#fca5a5;">
+              ⚠️ {{ incident.problems }}
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Situation Photo Preview -->
+        {% if incident.media_url %}
+          <div style="margin-top:20px;">
+            <label style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); font-weight:700; display:block; margin-bottom:6px;">
+              Incident Media Attachment
+            </label>
+            <div class="photo-preview-box">
+              <img src="{{ incident.media_url }}" alt="Incident Photo Attachment">
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Explainable Smart Prioritization Analysis -->
+      <div class="dossier-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-subtle); padding-bottom:12px; margin-bottom:18px;">
+          <h3 style="border:none; margin:0; padding:0;"><span>🧠</span> Explainable AI Prioritization Matrix</h3>
+          <span class="badge-priority {{ incident.priority_level.lower() }}">
+            Score: {{ incident.priority_score }}/100
+          </span>
+        </div>
+
+        <div class="breakdown-factors-list">
+          {% set factors = incident.priority_breakdown %}
+          
+          {% set factor_labels = {
+            "injured_points": "Trauma & Injured Urgency (Max 30 pts)",
+            "vulnerable_points": "Vulnerable Persons Factor (Max 20 pts)",
+            "affected_scale_points": "Scale of Affected Population (Max 15 pts)",
+            "disaster_hazard_points": "Intrinsic Disaster Hazard Factor (Max 22 pts)",
+            "assistance_urgency_points": "Assistance Urgency (Medical/Rescue) (Max 20 pts)",
+            "severity_assessment_points": "Citizen Severity Assessment (Max 15 pts)",
+            "time_escalation_points": "Time Elapsed Anti-Neglect Escalation (Max 15 pts)"
+          } %}
+
+          {% for f_key, f_title in factor_labels.items() %}
+            {% set f_item = factors.get(f_key, {'value': 0, 'max': 20, 'detail': 'Standard'}) %}
+            <div class="breakdown-factor-item">
+              <div class="factor-top">
+                <span>{{ f_title }}</span>
+                <span class="factor-score-pill">{{ f_item.value }} / {{ f_item.max }} pts</span>
+              </div>
+              <div class="factor-bar-bg">
+                <div class="factor-bar-fill" style="width: {{ (f_item.value / f_item.max * 100) | round }}%;"></div>
+              </div>
+              <div class="factor-desc">{{ f_item.detail }}</div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <!-- Commander Override Option -->
+        <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border-subtle);">
+          <button class="btn btn-outline btn-sm" onclick="openPriorityBreakdownModal({{ incident.id }}, '{{ incident.tracking_id }}', {{ incident.priority_score }}, '{{ incident.priority_level }}', {{ incident.priority_breakdown_json | tojson }})">
+            🛡️ Commander Priority Override
+          </button>
+        </div>
+      </div>
+
+      <!-- Incident Activity Log & Timeline -->
+      <div class="dossier-card">
+        <h3><span>📜</span> Operational Activity & Progress Log</h3>
+        <div class="updates-log-feed">
+          {% for u in updates %}
+            <div class="update-entry">
+              <div class="update-entry-meta">
+                <span><b>{{ u.author_name }}</b> ({{ u.author_role }})</span>
+                <span>{{ u.created_at[:19].replace('T', ' ') }} UTC</span>
+              </div>
+              <div class="update-entry-notes">{{ u.notes }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Operational Controls & Government Gateway -->
+    <div>
+
+      <!-- 1. Operational Status Controller (7 Stages) -->
+      <div class="dossier-card">
+        <h3><span>⚡</span> Operational Stage Control</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px;">
+          Advance incident through designated 7-stage workflow. Field notes are mandatory.
+        </p>
+
+        <form id="dossierStatusForm">
+          <div class="form-group">
+            <label>Current Status: <b style="color:#60a5fa;">{{ incident.status }}</b></label>
+            <select class="form-control" id="dossierStatusSelect" required>
+              <option value="Submitted" {% if incident.status == 'Submitted' %}selected{% endif %}>1. Submitted</option>
+              <option value="Under Review" {% if incident.status == 'Under Review' %}selected{% endif %}>2. Under Review</option>
+              <option value="Verified" {% if incident.status == 'Verified' %}selected{% endif %}>3. Verified</option>
+              <option value="Assigned to Rescue Team" {% if incident.status == 'Assigned to Rescue Team' %}selected{% endif %}>4. Assigned to Rescue Team</option>
+              <option value="Rescue Team Dispatched" {% if incident.status == 'Rescue Team Dispatched' %}selected{% endif %}>5. Rescue Team Dispatched</option>
+              <option value="Assistance in Progress" {% if incident.status == 'Assistance in Progress' %}selected{% endif %}>6. Assistance in Progress</option>
+              <option value="Resolved" {% if incident.status == 'Resolved' %}selected{% endif %}>7. Resolved</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Field Notes / Operational Remarks *</label>
+            <textarea class="form-control" id="dossierStatusNotes" rows="3" placeholder="Enter reason, progress, victim status..." required></textarea>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="saveDossierStatusBtn" style="width:100%;">
+            Save Operational Stage
+          </button>
+        </form>
+      </div>
+
+      <!-- 2. Rescue Team Assignment -->
+      <div class="dossier-card">
+        <h3><span>🛡️</span> Rescue Unit Deployment</h3>
+
+        {% if incident.team_name %}
+          <div style="background:rgba(37,99,235,0.12); border:1px solid rgba(59,130,246,0.3); border-radius:var(--radius-md); padding:14px; margin-bottom:14px;">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#93c5fd; font-weight:700;">Currently Assigned</div>
+            <div style="font-size:1.05rem; font-weight:700; color:#ffffff; margin:2px 0;">{{ incident.team_name }}</div>
+            <div style="font-size:0.8rem; color:var(--text-muted);">
+              <b>Agency:</b> {{ incident.team_agency }} | <b>Status:</b> {{ incident.team_status }}<br>
+              <b>Lead:</b> {{ incident.contact_lead }} (<a href="tel:{{ incident.team_phone }}" style="color:#60a5fa;">{{ incident.team_phone }}</a>)
+            </div>
+          </div>
+        {% else %}
+          <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">
+            No rescue unit currently assigned. Select nearest battalion below.
+          </p>
+        {% endif %}
+
+        <button class="btn btn-outline" style="width:100%;" onclick="openAssignModal({{ incident.id }}, '{{ incident.tracking_id }}', '{{ incident.assigned_team_id or '' }}')">
+          {% if incident.team_name %}Re-assign or Change Unit{% else %}Assign Rescue Unit{% endif %}
+        </button>
+      </div>
+
+      <!-- 3. Government Portal Integration (NDMA / SDMA) -->
+      <div class="dossier-card">
+        <h3><span>🏛️</span> Government Portal Integration</h3>
+        
+        <div style="margin-bottom:14px;">
+          <div style="font-size:0.75rem; text-transform:uppercase; color:var(--text-dim); font-weight:600;">Integration Status</div>
+          <div style="margin-top:4px;">
+            {% if incident.government_sync_status == 'TRANSMITTED' %}
+              <span class="badge-gov transmitted" style="font-size:0.85rem; padding:4px 10px;">✓ TRANSMITTED</span>
+              <div style="font-size:0.75rem; color:#34d399; font-family:var(--font-mono); margin-top:6px;">
+                Receipt: <b>{{ incident.sync_receipt_id }}</b><br>
+                Timestamp: {{ incident.sync_timestamp }}
+              </div>
+            {% elif incident.government_sync_status == 'PENDING_REVIEW' %}
+              <span class="badge-gov pending" style="font-size:0.85rem; padding:4px 10px;">⏳ PENDING COMMAND REVIEW</span>
+            {% elif incident.government_sync_status == 'TRANSMISSION_FAILED' %}
+              <span class="badge-gov failed" style="font-size:0.85rem; padding:4px 10px;">✕ GATEWAY TRANSMISSION FAILED</span>
+            {% else %}
+              <span class="badge-gov unforwarded" style="font-size:0.85rem; padding:4px 10px;">NOT FORWARDED</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button class="btn btn-primary" onclick="openGovTransmitModal({{ incident.id }}, '{{ incident.tracking_id }}', '{{ incident.state }}', '{{ incident.district }}')">
+            🚀 Transmit to NDMA / SDMA Gateway
+          </button>
+
+          <button class="btn btn-outline btn-sm" onclick="toggleCapViewer()">
+            🔍 View OASIS CAP v1.2 JSON
+          </button>
+        </div>
+
+        <!-- Collapsible CAP Payload Viewer -->
+        <div id="capPayloadViewer" style="display:none; margin-top:14px;">
+          <span style="font-size:0.72rem; color:var(--text-muted); font-family:var(--font-mono); display:block; margin-bottom:4px;">
+            OASIS CAP v1.2 Standard Alert Payload:
+          </span>
+          <pre class="code-terminal-box">{{ cap_preview_json }}</pre>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleCapViewer() {
+  const el = document.getElementById("capPayloadViewer");
+  if (el) {
+    el.style.display = el.style.display === "none" ? "block" : "none";
+  }
+}
+
+// Handle dossier status form submit
+document.addEventListener("DOMContentLoaded", () => {
+  const form = document.getElementById("dossierStatusForm");
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const statusSelect = document.getElementById("dossierStatusSelect");
+      const notesInput = document.getElementById("dossierStatusNotes");
+      const submitBtn = document.getElementById("saveDossierStatusBtn");
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Saving...";
+
+      try {
+        const res = await fetch("/api/incident/{{ incident.id }}/update-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: statusSelect.value,
+            notes: notesInput.value.trim()
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message, "success");
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showToast(data.error || "Failed to update status", "error");
+        }
+      } catch (err) {
+        showToast("Error updating status.", "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Save Operational Stage";
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

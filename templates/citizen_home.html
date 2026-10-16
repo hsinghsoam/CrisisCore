@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}CrisisCore // Citizen Emergency Portal & Disaster Assistance{% endblock %}
+
+{% block content %}
+<div class="citizen-home-wrapper">
+
+  <!-- Hero Dual Action Grid -->
+  <div class="citizen-hero">
+    
+    <!-- 1. Rapid Emergency Action Card -->
+    <div class="hero-sos-card">
+      <div>
+        <div class="sos-badge-tag">
+          <span class="pulsing-dot" style="background:#ef4444;"></span>
+          <span>आपातकालीन सहायता // IMMEDIATE DISTRESS</span>
+        </div>
+        <h2>Trapped or in Immediate Danger?</h2>
+        <p>
+          Connect with National & State Disaster Response Forces (NDRF/SDRF), emergency medical teams, and district rescue command instantly.
+        </p>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <button onclick="triggerQuickSos()" class="sos-quick-btn" id="homeQuickSosBtn">
+          <span style="font-size:1.6rem;">🚨</span>
+          <div style="text-align:left;">
+            <div style="font-size:1.15rem; font-weight:800;">ONE-TOUCH SOS ALARM</div>
+            <div style="font-size:0.75rem; font-weight:500; opacity:0.9;">Instant GPS Distress Signal (त्वरित सहायता)</div>
+          </div>
+        </button>
+
+        <a href="/report" class="btn btn-primary" id="homeDetailedReportBtn" style="padding:14px; font-size:1rem; border-radius:var(--radius-lg);">
+          📝 Submit Detailed Incident Report (विस्तृत रिपोर्ट दर्ज करें)
+        </a>
+      </div>
+    </div>
+
+    <!-- 2. Track Existing Request Card -->
+    <div class="hero-track-card">
+      <div>
+        <span class="badge-status verified" style="margin-bottom:12px;">LIVE INCIDENT TRACKING</span>
+        <h2>Track Your Emergency Request</h2>
+        <p>
+          Enter your unique tracking ID or mobile number to monitor rescue convoy dispatch, triage verification, and field team progress.
+        </p>
+
+        <form action="/track" method="GET" style="margin-top:20px;">
+          <div class="track-input-group">
+            <input type="text" name="id" placeholder="e.g. CRISIS-2026-IND-0101" id="homeTrackInput">
+            <button type="submit" class="btn btn-primary" id="homeTrackSubmitBtn">Track Status</button>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.76rem; color:var(--text-dim);">
+            <span>No account creation needed</span>
+            <a href="/track" style="color:#38bdf8; text-decoration:none;">Search by phone number →</a>
+          </div>
+        </form>
+      </div>
+
+      <!-- Quick status summary counter -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:24px; padding-top:18px; border-top:1px solid var(--border-subtle);">
+        <div style="background:var(--bg-surface); padding:12px; border-radius:var(--radius-md); text-align:center;">
+          <div style="font-size:1.4rem; font-weight:800; font-family:var(--font-mono); color:#38bdf8;">{{ active_incidents }}</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase;">Active Incidents Monitored</div>
+        </div>
+        <div style="background:var(--bg-surface); padding:12px; border-radius:var(--radius-md); text-align:center;">
+          <div style="font-size:1.4rem; font-weight:800; font-family:var(--font-mono); color:#10b981;">{{ deployed_teams }}</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase;">Rescue Battalions Deployed</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- National Emergency Helplines Grid -->
+  <div style="margin-bottom:16px;">
+    <h3 style="font-size:1.1rem; font-weight:700; color:var(--text-bright); margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+      📞 National 24x7 Emergency Hotlines (राष्ट्रीय आपातकालीन नंबर)
+    </h3>
+    <div class="helplines-grid">
+      <a href="tel:112" class="helpline-box emergency">
+        <div class="helpline-icon-wrap">112</div>
+        <div class="helpline-info">
+          <h4>112</h4>
+          <span>National Unified Emergency (All Services)</span>
+        </div>
+      </a>
+      <a href="tel:1070" class="helpline-box">
+        <div class="helpline-icon-wrap">1070</div>
+        <div class="helpline-info">
+          <h4>1070</h4>
+          <span>NDMA Disaster Control Room</span>
+        </div>
+      </a>
+      <a href="tel:1077" class="helpline-box">
+        <div class="helpline-icon-wrap">1077</div>
+        <div class="helpline-info">
+          <h4>1077</h4>
+          <span>District Disaster Helpline (DDMA)</span>
+        </div>
+      </a>
+      <a href="tel:108" class="helpline-box">
+        <div class="helpline-icon-wrap">108</div>
+        <div class="helpline-info">
+          <h4>108</h4>
+          <span>Ambulance & Trauma Medical Rescue</span>
+        </div>
+      </a>
+      <a href="tel:101" class="helpline-box">
+        <div class="helpline-icon-wrap">101</div>
+        <div class="helpline-info">
+          <h4>101</h4>
+          <span>Fire, HazMat & Inundation Rescue</span>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- High-Stress Preparedness Advisory -->
+  <div style="background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-xl); padding:28px; margin-top:28px;">
+    <h3 style="font-size:1.15rem; font-weight:700; color:var(--text-bright); margin-bottom:16px;">
+      ℹ️ Critical Instructions During Disaster Operations (आपदा के समय ध्यान देने योग्य बातें)
+    </h3>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px;">
+      <div style="background:var(--bg-surface); padding:16px; border-radius:var(--radius-lg); border-left:3px solid #38bdf8;">
+        <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-bright); margin-bottom:6px;">🌊 Flash Flood / Rising Waters</h4>
+        <p style="font-size:0.82rem; color:var(--text-muted);">
+          Turn off main electrical breaker. Move to the highest reinforced terrace or roof. Do not walk or drive through moving water. Signal rescue helicopters with bright cloth or flashlights.
+        </p>
+      </div>
+      <div style="background:var(--bg-surface); padding:16px; border-radius:var(--radius-lg); border-left:3px solid #f97316;">
+        <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-bright); margin-bottom:6px;">⛰️ Landslides & Mudflows</h4>
+        <p style="font-size:0.82rem; color:var(--text-muted);">
+          Stay alert for sudden changes in water flow or rumbling sounds. If rocks or debris approach, run immediately to nearest high ground away from valleys and steep slopes.
+        </p>
+      </div>
+      <div style="background:var(--bg-surface); padding:16px; border-radius:var(--radius-lg); border-left:3px solid #ef4444;">
+        <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-bright); margin-bottom:6px;">🌋 Earthquake / Structural Failure</h4>
+        <p style="font-size:0.82rem; color:var(--text-muted);">
+          <b>DROP, COVER, HOLD ON</b>. Stay away from glass windows and power lines. If trapped under rubble, tap on pipes or walls; avoid shouting except when hearing rescuers to conserve oxygen.
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/citizen.js"></script>
+{% endblock %}

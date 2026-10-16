@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block title %}Report Disaster Emergency // CrisisCore Citizen Portal{% endblock %}
+
+{% block content %}
+<div class="form-container-card">
+
+  <div class="form-header-bar">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <h2>🚨 Submit Emergency Assistance Request</h2>
+      <span class="badge-status submitted">NO LOGIN REQUIRED</span>
+    </div>
+    <p>
+      Fill out the details below as accurately as possible. Our system immediately scores distress telemetry, identifies high-urgency victims, and mobilizes nearest rescue teams.
+    </p>
+  </div>
+
+  <form id="emergencyReportForm" enctype="multipart/form-data">
+
+    <!-- 1. Citizen Contact -->
+    <div class="form-section-title">
+      <span>1. Contact & Identity (संपर्क विवरण)</span>
+    </div>
+
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="citizenName">Full Name <span class="bilingual">पूरा नाम *</span></label>
+        <input type="text" class="form-control" id="citizenName" name="citizen_name" placeholder="e.g. Anand Varma" required>
+      </div>
+
+      <div class="form-group">
+        <label for="citizenPhone">Mobile Number <span class="bilingual">मोबाइल नंबर *</span></label>
+        <input type="tel" class="form-control" id="citizenPhone" name="phone" placeholder="e.g. +91 98765 43210" required>
+      </div>
+    </div>
+
+    <!-- 2. Geo-Location & Incident Pin -->
+    <div class="form-section-title">
+      <span>2. Exact Incident Location (घटना स्थल)</span>
+    </div>
+
+    <div class="gps-bar">
+      <button type="button" class="btn btn-outline btn-sm" onclick="acquireGpsLocation()" id="gpsLocateBtn">
+        🛰️ Detect My GPS Location
+      </button>
+      <span class="gps-status-text" id="gpsCoordsDisplay">Coordinates: Pending GPS detection</span>
+    </div>
+
+    <!-- Mini map picker -->
+    <div style="height:220px; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border-bright); margin-bottom:16px;" id="miniMapContainer"></div>
+
+    <input type="hidden" name="lat" id="latInput" value="20.5937">
+    <input type="hidden" name="lng" id="lngInput" value="78.9629">
+
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="stateSelect">State / UT <span class="bilingual">राज्य *</span></label>
+        <select class="form-control" id="stateSelect" name="state" onchange="handleStateChange()" required>
+          <option value="">-- Select State --</option>
+          <option value="Kerala">Kerala</option>
+          <option value="Uttarakhand">Uttarakhand</option>
+          <option value="Odisha">Odisha</option>
+          <option value="Assam">Assam</option>
+          <option value="Maharashtra">Maharashtra</option>
+          <option value="Himachal Pradesh">Himachal Pradesh</option>
+          <option value="Tamil Nadu">Tamil Nadu</option>
+          <option value="West Bengal">West Bengal</option>
+          <option value="Gujarat">Gujarat</option>
+          <option value="Other State">Other State</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="districtSelect">District <span class="bilingual">जिला *</span></label>
+        <select class="form-control" id="districtSelect" name="district" required>
+          <option value="">-- Select District --</option>
+          <option value="Central Disaster Zone">Central Disaster Zone</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="addressInput">Street Address / Landmark / Village <span class="bilingual">पता / निकटतम पहचान चिह्न *</span></label>
+      <input type="text" class="form-control" id="addressInput" name="address" placeholder="e.g. Near Old Bridge, Ward 4, Riverside Hamlet" required>
+    </div>
+
+    <!-- 3. Disaster Classification -->
+    <div class="form-section-title">
+      <span>3. Disaster Type & Urgency (आपदा का प्रकार)</span>
+    </div>
+
+    <div class="disaster-selector-grid">
+      <label class="disaster-option-card selected">
+        <input type="radio" name="disaster_type" value="Flash Flood / Inundation" checked>
+        <span class="d-icon">🌊</span>
+        <span class="d-label">Flash Flood / बाढ़</span>
+      </label>
+
+      <label class="disaster-option-card">
+        <input type="radio" name="disaster_type" value="Landslide / Mudflow">
+        <span class="d-icon">⛰️</span>
+        <span class="d-label">Landslide / भूस्खलन</span>
+      </label>
+
+      <label class="disaster-option-card">
+        <input type="radio" name="disaster_type" value="Cyclone / Super Storm">
+        <span class="d-icon">🌀</span>
+        <span class="d-label">Cyclone / चक्रवात</span>
+      </label>
+
+      <label class="disaster-option-card">
+        <input type="radio" name="disaster_type" value="Earthquake">
+        <span class="d-icon">🌋</span>
+        <span class="d-label">Earthquake / भूकंप</span>
+      </label>
+
+      <label class="disaster-option-card">
+        <input type="radio" name="disaster_type" value="Industrial Fire / Explosion">
+        <span class="d-icon">🔥</span>
+        <span class="d-label">Industrial Fire / आग</span>
+      </label>
+
+      <label class="disaster-option-card">
+        <input type="radio" name="disaster_type" value="Building Collapse">
+        <span class="d-icon">🏚️</span>
+        <span class="d-label">Building Collapse / ढहना</span>
+      </label>
+
+      <label class="disaster-option-card">
+        <input type="radio" name="disaster_type" value="Tsunami / Coastal Surge">
+        <span class="d-icon">🌊</span>
+        <span class="d-label">Tsunami / सुनामी</span>
+      </label>
+
+      <label class="disaster-option-card">
+        <input type="radio" name="disaster_type" value="Other">
+        <span class="d-icon">⚠️</span>
+        <span class="d-label">Other Emergency / अन्य</span>
+      </label>
+    </div>
+
+    <div class="form-group">
+      <label for="severitySelect">Perceived Emergency Severity <span class="bilingual">गंभीरता का स्तर *</span></label>
+      <select class="form-control" id="severitySelect" name="severity_input">
+        <option value="Life Threatening">Life Threatening (Immediate risk of death or severe trauma)</option>
+        <option value="Immediate Danger" selected>Immediate Danger (Trapped, water rising, structural hazard)</option>
+        <option value="Moderate">Moderate (Stranded without basic supplies, stable condition)</option>
+        <option value="Precautionary">Precautionary (Safe for now, but requiring evacuation)</option>
+      </select>
+    </div>
+
+    <!-- 4. Affected People Tally -->
+    <div class="form-section-title">
+      <span>4. People Affected & Vulnerable Demographics (प्रभावित व्यक्तियों की संख्या)</span>
+    </div>
+
+    <div class="form-grid-4">
+      <div class="counter-box">
+        <span class="counter-title">Total Affected (कुल प्रभावित)</span>
+        <div class="counter-controls">
+          <button type="button" class="counter-btn" onclick="adjustCounter('affected_count', -1)">−</button>
+          <span class="counter-number" id="affected_count_display">4</span>
+          <button type="button" class="counter-btn" onclick="adjustCounter('affected_count', 1)">+</button>
+        </div>
+        <input type="hidden" name="affected_count" id="affected_count" value="4">
+      </div>
+
+      <div class="counter-box">
+        <span class="counter-title">Injured (घायल)</span>
+        <div class="counter-controls">
+          <button type="button" class="counter-btn" onclick="adjustCounter('injured_count', -1)">−</button>
+          <span class="counter-number" id="injured_count_display">0</span>
+          <button type="button" class="counter-btn" onclick="adjustCounter('injured_count', 1)">+</button>
+        </div>
+        <input type="hidden" name="injured_count" id="injured_count" value="0">
+      </div>
+
+      <div class="counter-box">
+        <span class="counter-title">Children (बच्चे &lt;12)</span>
+        <div class="counter-controls">
+          <button type="button" class="counter-btn" onclick="adjustCounter('children_count', -1)">−</button>
+          <span class="counter-number" id="children_count_display">1</span>
+          <button type="button" class="counter-btn" onclick="adjustCounter('children_count', 1)">+</button>
+        </div>
+        <input type="hidden" name="children_count" id="children_count" value="1">
+      </div>
+
+      <div class="counter-box">
+        <span class="counter-title">Elderly (बुजुर्ग 60+)</span>
+        <div class="counter-controls">
+          <button type="button" class="counter-btn" onclick="adjustCounter('elderly_count', -1)">−</button>
+          <span class="counter-number" id="elderly_count_display">1</span>
+          <button type="button" class="counter-btn" onclick="adjustCounter('elderly_count', 1)">+</button>
+        </div>
+        <input type="hidden" name="elderly_count" id="elderly_count" value="1">
+      </div>
+    </div>
+
+    <!-- 5. Assistance Required -->
+    <div class="form-section-title">
+      <span>5. Required Assistance (आवश्यक सहायता)</span>
+    </div>
+
+    <div class="assistance-chips-grid">
+      <label class="assistance-chip selected">
+        <input type="checkbox" name="assistance_required" value="Rescue Boat / Evacuation" checked>
+        <span>🚤 Rescue Boat / Evacuation (नाव / बचाव)</span>
+      </label>
+
+      <label class="assistance-chip">
+        <input type="checkbox" name="assistance_required" value="Urgent Medical Care / Trauma">
+        <span>🚑 Urgent Medical / Trauma (चिकित्सा सहायता)</span>
+      </label>
+
+      <label class="assistance-chip selected">
+        <input type="checkbox" name="assistance_required" value="Emergency Food & Potable Water" checked>
+        <span>🍞 Food & Clean Water (भोजन और पानी)</span>
+      </label>
+
+      <label class="assistance-chip">
+        <input type="checkbox" name="assistance_required" value="Temporary Shelter">
+        <span>⛺ Temporary Shelter (अस्थायी आश्रय)</span>
+      </label>
+
+      <label class="assistance-chip">
+        <input type="checkbox" name="assistance_required" value="Specialized Rescue Equipment (Earthmover / Rope Triage)">
+        <span>🏗️ Heavy Equipment / Rope Triage (विशेष उपकरण)</span>
+      </label>
+
+      <label class="assistance-chip">
+        <input type="checkbox" name="assistance_required" value="Clothing / Blankets">
+        <span>🧥 Clothing & Blankets (कंबल / कपड़े)</span>
+      </label>
+    </div>
+
+    <!-- 6. Emergency Description & Problems -->
+    <div class="form-section-title">
+      <span>6. Emergency Description & Immediate Obstacles (विवरण)</span>
+    </div>
+
+    <div class="form-group">
+      <label for="descInput">Description of the Situation <span class="bilingual">स्थिति का विवरण *</span></label>
+      <textarea class="form-control" id="descInput" name="description" placeholder="Describe what has happened, exact location within building or area, water depth, building condition, etc." required></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="probInput">Immediate Problems / Hazards Faced <span class="bilingual">तात्कालिक समस्याएं</span></label>
+      <input type="text" class="form-control" id="probInput" name="problems" placeholder="e.g. Electrical sparks, rising current, no drinking water, hypothermia, bridge collapsed">
+    </div>
+
+    <!-- 7. Media Upload -->
+    <div class="form-section-title">
+      <span>7. Incident Photos / Videos (तस्वीरें / वीडियो अपलोड करें)</span>
+    </div>
+
+    <div class="form-group">
+      <label for="mediaFileInput">Attach Situation Photo / Video (Optional, helps responders plan)</label>
+      <input type="file" class="form-control" id="mediaFileInput" name="media_file" accept="image/*,video/*">
+      <div id="mediaPreviewContainer" style="display:none; margin-top:10px;">
+        <img id="mediaPreviewImg" src="" alt="Incident Photo Preview" style="max-height:160px; border-radius:var(--radius-md); border:1px solid var(--border-bright);">
+        <p id="mediaFileName" style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;"></p>
+      </div>
+    </div>
+
+    <!-- 8. Anti-Abuse Math Puzzle -->
+    <div class="captcha-container">
+      <div style="font-size:0.85rem; color:var(--text-muted);">
+        <b>Anti-Abuse Verification:</b><br>Solve to prevent automated spam:
+      </div>
+      <div class="captcha-badge">{{ captcha_question }}</div>
+      <input type="number" class="form-control" name="captcha_answer" id="captchaAnswerInput" placeholder="Answer" style="max-width:120px;" required>
+    </div>
+
+    <!-- Submit Button -->
+    <div style="margin-top:28px;">
+      <button type="submit" class="btn btn-danger" id="submitReportBtn" style="width:100%; padding:16px; font-size:1.1rem; border-radius:var(--radius-lg);">
+        🚨 Submit Emergency Request (मदद के लिए अनुरोध भेजें)
+      </button>
+      <p style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:10px;">
+        A unique Tracking ID will be generated upon submission. Keep your mobile phone accessible.
+      </p>
+    </div>
+
+  </form>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/citizen.js"></script>
+{% endblock %}

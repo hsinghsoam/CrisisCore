@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Government Integration & CAP Gateway // CrisisCore{% endblock %}
+
+{% block content %}
+<div class="gov-gateway-wrapper">
+
+  <div class="dashboard-header">
+    <div>
+      <h2 style="font-size:1.6rem; font-weight:800; color:var(--text-bright);">
+        National & State Disaster Portal Gateway
+      </h2>
+      <p style="color:var(--text-muted); font-size:0.85rem;">
+        Secure transmission of verified emergency incidents to NDMA, SDMA, DDMA, and 112 ERSS under OASIS CAP v1.2 specifications.
+      </p>
+    </div>
+
+    <div class="dashboard-actions">
+      <a href="/api/export/sitrep.pdf" class="btn btn-outline btn-sm">Download SITREP (PDF)</a>
+      <a href="/api/export/incidents.csv" class="btn btn-outline btn-sm">Export Full Registry (CSV)</a>
+    </div>
+  </div>
+
+  <!-- Gateway Integrity & Anti-False-Claim Banner -->
+  <div style="background:rgba(37,99,235,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:var(--radius-lg); padding:20px; margin-bottom:24px;">
+    <div style="display:flex; align-items:flex-start; gap:14px;">
+      <span style="font-size:1.8rem;">🏛️</span>
+      <div>
+        <h4 style="font-size:1rem; font-weight:700; color:#93c5fd; margin-bottom:4px;">
+          Government Transmission Protocol & Integrity Guarantees
+        </h4>
+        <p style="font-size:0.84rem; color:var(--text-muted); line-height:1.5;">
+          Per strict humanitarian and emergency regulations: <b>CrisisCore never falsely reports that an emergency request has reached government authorities unless an authorized receipt has been returned.</b> Direct API integration is utilized where authorized endpoints are active. For remote or offline jurisdictions, an authenticated officer review and export bundle is used to transmit reports via secure government channels.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Counter Cards -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); margin-bottom:28px;">
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">Transmitted & Confirmed</span>
+        <span class="kpi-icon">✓</span>
+      </div>
+      <div class="kpi-value" style="color:#10b981;">{{ transmitted_count }}</div>
+      <div class="kpi-footer">Cryptographic receipts generated</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">Pending Commander Review</span>
+        <span class="kpi-icon">⏳</span>
+      </div>
+      <div class="kpi-value" style="color:#f59e0b;">{{ pending_count }}</div>
+      <div class="kpi-footer">Awaiting field authentication</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-top">
+        <span class="kpi-label">Unforwarded Reports</span>
+        <span class="kpi-icon">📋</span>
+      </div>
+      <div class="kpi-value" style="color:#94a3b8;">{{ unforwarded_count }}</div>
+      <div class="kpi-footer">Fresh incoming reports</div>
+    </div>
+  </div>
+
+  <!-- Transmission Ledger Table -->
+  <div class="table-card">
+    <div class="table-header-bar">
+      <h3>
+        <span>🔐</span> Official Government Transmission Audit Ledger
+        <span style="font-size:0.75rem; color:var(--text-dim); font-weight:400;">({{ transmissions|length }} transmissions recorded)</span>
+      </h3>
+      <span class="badge-status verified">SHA-256 Validated</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Receipt ID</th>
+            <th>Tracking ID</th>
+            <th>Target Agency</th>
+            <th>Protocol</th>
+            <th>Payload Digest (SHA-256)</th>
+            <th>Transmitting Officer</th>
+            <th>Status</th>
+            <th>Timestamp (UTC)</th>
+            <th>Inspect</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in transmissions %}
+            <tr>
+              <td>
+                <span style="font-family:var(--font-mono); font-weight:700; color:#38bdf8; font-size:0.78rem;">
+                  {{ t.receipt_id or 'N/A' }}
+                </span>
+              </td>
+              <td>
+                <a href="/incident/{{ t.tracking_id }}" class="table-tracking-id">{{ t.tracking_id }}</a>
+              </td>
+              <td>
+                <span style="font-weight:700; color:var(--text-bright);">{{ t.target_agency }}</span>
+              </td>
+              <td style="font-family:var(--font-mono); font-size:0.75rem;">
+                {{ t.protocol }}
+              </td>
+              <td>
+                <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);" title="{{ t.response_hash }}">
+                  {{ t.response_hash[:16] }}...
+                </span>
+              </td>
+              <td>
+                <span style="font-size:0.8rem;">{{ t.transmitted_by }}</span>
+              </td>
+              <td>
+                {% if t.transmission_status == 'TRANSMITTED' %}
+                  <span class="badge-gov transmitted">TRANSMITTED</span>
+                {% elif t.transmission_status == 'FAILED' %}
+                  <span class="badge-gov failed">FAILED</span>
+                {% else %}
+                  <span class="badge-gov pending">{{ t.transmission_status }}</span>
+                {% endif %}
+              </td>
+              <td style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim);">
+                {{ t.timestamp[:19].replace('T', ' ') }}
+              </td>
+              <td>
+                <button class="btn btn-outline btn-sm" onclick="inspectPayload({{ t.id }}, '{{ t.receipt_id }}', {{ t.payload_json | tojson }})">
+                  Payload
+                </button>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="9" style="text-align:center; padding:32px; color:var(--text-muted);">
+                No government transmissions logged yet. Use the Command Dashboard to transmit verified incidents.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Inspect Payload Modal -->
+  <div class="modal-overlay" id="inspectPayloadModal">
+    <div class="modal-box" style="max-width:720px;">
+      <div class="modal-header">
+        <div class="modal-title" id="inspectModalTitle">OASIS CAP v1.2 Transmission Payload</div>
+        <button class="modal-close-btn" onclick="closeModal('inspectPayloadModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:12px;">
+          Cryptographic payload dispatched to authorized government node:
+        </p>
+        <pre class="code-terminal-box" id="inspectPayloadContent" style="max-height:400px;"></pre>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function inspectPayload(id, receiptId, payloadJson) {
+  const title = document.getElementById("inspectModalTitle");
+  const content = document.getElementById("inspectPayloadContent");
+
+  if (title) title.textContent = `Transmission Receipt: ${receiptId || id}`;
+  if (content) {
+    try {
+      const parsed = typeof payloadJson === "string" ? JSON.parse(payloadJson) : payloadJson;
+      content.textContent = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      content.textContent = payloadJson;
+    }
+  }
+  openModal("inspectPayloadModal");
+}
+</script>
+{% endblock %}

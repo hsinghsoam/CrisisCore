@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Request Status Tracker // CrisisCore{% endblock %}
+
+{% block content %}
+<div class="tracking-container">
+
+  <!-- Search Card if no incident loaded -->
+  {% if not incident %}
+    <div class="form-container-card" style="max-width:680px; text-align:center;">
+      <h2 style="font-size:1.6rem; font-weight:800; color:var(--text-bright); margin-bottom:8px;">
+        🔍 Live Emergency Request Tracking
+      </h2>
+      <p style="color:var(--text-muted); font-size:0.92rem; margin-bottom:24px;">
+        Check real-time rescue status, assigned battalions, and control room actions.
+      </p>
+
+      <form action="/track" method="GET" style="display:flex; flex-direction:column; gap:16px;">
+        <div class="track-input-group">
+          <input type="text" name="id" placeholder="Enter Tracking ID (e.g. CRISIS-2026-IND-0101)" required>
+          <button type="submit" class="btn btn-primary">Track by ID</button>
+        </div>
+      </form>
+
+      <div style="margin:20px 0; display:flex; align-items:center; gap:12px;">
+        <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+        <span style="font-size:0.78rem; color:var(--text-dim); text-transform:uppercase;">or lookup by mobile</span>
+        <div style="flex:1; height:1px; background:var(--border-subtle);"></div>
+      </div>
+
+      <form action="/track" method="GET">
+        <div class="track-input-group">
+          <input type="tel" name="phone" placeholder="Enter registered Mobile Number" required>
+          <button type="submit" class="btn btn-outline">Find Request</button>
+        </div>
+      </form>
+
+      {% if tracking_id or phone_query %}
+        <div style="margin-top:20px; padding:14px; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); border-radius:var(--radius-md); color:#fca5a5; font-size:0.85rem;">
+          No active emergency request found for "<b>{{ tracking_id or phone_query }}</b>". Please verify the ID or contact <b>112</b> directly.
+        </div>
+      {% endif %}
+    </div>
+
+  {% else %}
+
+    <!-- Loaded Incident Dossier for Citizen -->
+    <div class="tracking-dossier-card">
+      <input type="hidden" id="currentTrackingId" value="{{ incident.tracking_id }}">
+
+      <!-- Header -->
+      <div class="tracking-header">
+        <div>
+          <span style="font-size:0.75rem; color:var(--text-dim); text-transform:uppercase; font-family:var(--font-mono);">
+            Official Tracking Number
+          </span>
+          <div class="tracking-id-tag">
+            <span>{{ incident.tracking_id }}</span>
+            <button onclick="copyToClipboard('{{ incident.tracking_id }}')" class="btn btn-outline btn-sm" style="padding:2px 8px; font-size:0.7rem;">Copy</button>
+          </div>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span class="badge-priority {{ incident.priority_level.lower() }}">
+            {{ incident.priority_level }} // Score: {{ incident.priority_score }}/100
+          </span>
+          <span class="badge-status {{ incident.status.lower().replace(' ', '-') }}">
+            {{ incident.status }}
+          </span>
+          {% if incident.government_sync_status == 'TRANSMITTED' %}
+            <span class="badge-gov transmitted" title="Transmitted to Official NDMA/SDMA Gateway">✓ Gov Notified</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 7-Stage Visual Progress Bar -->
+      {% set stages = [
+        "Submitted",
+        "Under Review",
+        "Verified",
+        "Assigned to Rescue Team",
+        "Rescue Team Dispatched",
+        "Assistance in Progress",
+        "Resolved"
+      ] %}
+
+      {% set current_index = 0 %}
+      {% for s in stages %}
+        {% if s == incident.status %}
+          {% set current_index = loop.index0 %}
+        {% endif %}
+      {% endfor %}
+
+      <div style="margin:24px 0 10px 0;">
+        <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">
+          Rescue Triage Progress (7-Stage Operational Lifecycle)
+        </span>
+      </div>
+
+      <div class="timeline-progress-track">
+        {% for s in stages %}
+          {% set step_idx = loop.index0 %}
+          <div class="timeline-step-node {% if step_idx < current_index %}completed{% elif step_idx == current_index %}active{% endif %}">
+            <div class="node-circle">
+              {% if step_idx < current_index %}
+                ✓
+              {% else %}
+                {{ loop.index }}
+              {% endif %}
+            </div>
+            <div class="node-title">{{ s }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Assigned Responder Card if any -->
+      {% if assigned_team %}
+        <div class="assigned-responder-card">
+          <div class="responder-info">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#93c5fd; font-weight:700;">
+              🛡️ Assigned Rescue Battalion
+            </div>
+            <h3>{{ assigned_team.name }}</h3>
+            <p>
+              <b>Agency:</b> {{ assigned_team.agency }} | <b>Base:</b> {{ assigned_team.base_location }}<br>
+              <b>Commander Lead:</b> {{ assigned_team.contact_lead }} (<a href="tel:{{ assigned_team.phone }}" style="color:#60a5fa; text-decoration:none;">{{ assigned_team.phone }}</a>)<br>
+              <b>Capacity & Gear:</b> {{ assigned_team.capacity_info }}
+            </p>
+          </div>
+          <div>
+            <span class="badge-status {{ assigned_team.status.lower().replace(' ', '-') }}" style="font-size:0.85rem; padding:6px 12px;">
+              {{ assigned_team.status }}
+            </span>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Incident Quick Details Grid -->
+      <div class="dossier-meta-grid" style="margin-top:24px; padding:18px; background:var(--bg-surface); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
+        <div class="meta-field">
+          <label>Disaster Classification</label>
+          <span>{{ incident.disaster_type }}</span>
+        </div>
+        <div class="meta-field">
+          <label>District & State</label>
+          <span>{{ incident.district }}, {{ incident.state }}</span>
+        </div>
+        <div class="meta-field">
+          <label>Affected / Injured</label>
+          <span>{{ incident.affected_count }} Affected ({{ incident.injured_count }} Injured)</span>
+        </div>
+        <div class="meta-field">
+          <label>Vulnerable Persons</label>
+          <span>{{ incident.children_count }} Children, {{ incident.elderly_count }} Elderly</span>
+        </div>
+        <div class="meta-field" style="grid-column: 1 / -1;">
+          <label>Assistance Demanded</label>
+          <span>{{ incident.assistance_required }}</span>
+        </div>
+        <div class="meta-field" style="grid-column: 1 / -1;">
+          <label>Location Landmark / Address</label>
+          <span>{{ incident.address }}</span>
+        </div>
+      </div>
+
+      <!-- Attached Photo if available -->
+      {% if incident.media_url %}
+        <div style="margin-top:20px;">
+          <span style="font-size:0.75rem; text-transform:uppercase; color:var(--text-muted); font-weight:600;">Uploaded Situation Media</span>
+          <div class="photo-preview-box">
+            <img src="{{ incident.media_url }}" alt="Situation Photo">
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- Post Follow-up Update Form -->
+      <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+        <h4 style="font-size:1rem; font-weight:700; color:var(--text-bright); margin-bottom:8px;">
+          💬 Post Status Update to Rescue Operations Desk
+        </h4>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">
+          Has your condition changed? Are floodwaters rising or receding? Provide immediate updates to the responding officers below.
+        </p>
+
+        <form id="citizenUpdateForm">
+          <div style="display:flex; gap:10px;">
+            <input type="text" class="form-control" id="citizenNoteInput" placeholder="e.g. Water reached 1st floor; 2 more elderly people gathered on terrace" required>
+            <button type="submit" class="btn btn-primary" id="postUpdateBtn">Post Update</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Updates Timeline History -->
+      <div class="updates-log-feed">
+        <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-bright); margin-bottom:4px;">
+          📜 Incident Activity & Operations Timeline
+        </h4>
+        {% for u in updates %}
+          <div class="update-entry">
+            <div class="update-entry-meta">
+              <span><b>{{ u.author_name }}</b> ({{ u.author_role }})</span>
+              <span>{{ u.created_at[:19].replace('T', ' ') }} UTC</span>
+            </div>
+            <div class="update-entry-notes">{{ u.notes }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+      <!-- Nearby Verified Camps & Hospitals -->
+      {% if nearby_camps %}
+        <div style="margin-top:32px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+          <h4 style="font-size:1rem; font-weight:700; color:var(--text-bright); margin-bottom:14px;">
+            🏥 Nearby Verified Relief Centers & Emergency Hospitals
+          </h4>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px;">
+            {% for c in nearby_camps %}
+              <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <span style="font-size:0.75rem; font-weight:700; color:{% if c.type == 'Hospital' %}#f87171{% else %}#34d399{% endif %};">
+                    {{ c.type }}
+                  </span>
+                  <span style="font-size:0.7rem; color:var(--text-dim);">Available: <b>{{ c.available_capacity }}</b></span>
+                </div>
+                <div style="font-size:0.9rem; font-weight:700; color:var(--text-bright);">{{ c.name }}</div>
+                <div style="font-size:0.78rem; color:var(--text-muted); margin:4px 0;">📍 {{ c.district }}, {{ c.state }}</div>
+                <div style="font-size:0.78rem; color:#38bdf8;">📞 <a href="tel:{{ c.contact_phone }}" style="color:inherit; text-decoration:none;">{{ c.contact_phone }}</a></div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/tracking.js"></script>
+{% endblock %}
